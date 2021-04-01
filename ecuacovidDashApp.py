@@ -15,8 +15,19 @@ df = pd.read_csv("ecuacovid.csv")
 
 available_indicators = list(df.columns)
 
+mrkd_title = '''
+## Dashboard for COVID-19 data in Ecuador
+
+Data taken from [source](https://github.com/andrab/ecuacovid/tree/master/datos_crudos) on 01/04/2021
+
+'''
+
+
 #---------------------------------------------------------------
 app.layout = html.Div([
+    html.Div([
+        dcc.Markdown(children=mrkd_title)
+    ]),
     html.Div([
             dcc.Dropdown(
                 id='crossfilter-column',
@@ -30,14 +41,14 @@ app.layout = html.Div([
                 labelStyle={'display': 'inline-block'}
             )
             ],
-            style={'width': '100%', 'display': 'inline-block'}
+            style={'width': '70%',  'display': 'inline-block'}
     ),
     html.Div([
         dcc.Graph(id='x-time-series')
         ],
-        style={'display': 'inline-block', 'width': '100%'}
+        style={'display': 'inline-block', 'width': '70%', 'height':'80%'}
     )
-])
+],style={'text-align':'center'})
 
 #------------------------------------------------------------------
 
@@ -73,7 +84,7 @@ def create_time_series(dff, axis_type, title):
                        xref='paper', yref='paper', showarrow=False, align='left',
                        bgcolor='rgba(255, 255, 255, 0.5)', text=title)
 
-    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
+    fig.update_layout(margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
 
     return fig
 
