@@ -11,130 +11,83 @@ app = dash.Dash(__name__)
 server = app.server
 
 #---------------------------------------------------------------
-#Taken from https://www.ecdc.europa.eu/en/geographical-distribution-2019-ncov-cases
 df = pd.read_csv("ecuacovid.csv")
 
-dff = df.groupby('countriesAndTerritories', as_index=False)[['deaths','cases']].sum()
-print (dff[:5])
+available_indicators = list(df.columns)
+
 #---------------------------------------------------------------
 app.layout = html.Div([
     html.Div([
-        dash_table.DataTable(
-            id='datatable_id',
-            data=dff.to_dict('records'),
-            columns=[
-                {"name": i, "id": i, "deletable": False, "selectable": False} for i in dff.columns
-            ],
-            editable=False,
-            filter_action="native",
-            sort_action="native",
-            sort_mode="multi",
-            row_selectable="multi",
-            row_deletable=False,
-            selected_rows=[],
-            page_action="native",
-            page_current= 0,
-            page_size= 6,
-            # page_action='none',
-            # style_cell={
-            # 'whiteSpace': 'normal'
-            # },
-            # fixed_rows={ 'headers': True, 'data': 0 },
-            # virtualization=False,
-            style_cell_conditional=[
-                {'if': {'column_id': 'countriesAndTerritories'},
-                 'width': '40%', 'textAlign': 'left'},
-                {'if': {'column_id': 'deaths'},
-                 'width': '30%', 'textAlign': 'left'},
-                {'if': {'column_id': 'cases'},
-                 'width': '30%', 'textAlign': 'left'},
-            ],
-        ),
-    ],className='row'),
-
-    html.Div([
-        html.Div([
-            dcc.Dropdown(id='linedropdown',
-                options=[
-                         {'label': 'Deaths', 'value': 'deaths'},
-                         {'label': 'Cases', 'value': 'cases'}
-                ],
-                value='deaths',
-                multi=False,
-                clearable=False
+            dcc.Dropdown(
+                id='crossfilter-column',
+                options=[{'label': i, 'value': i} for i in available_indicators],
+                value='muertes_confirmadas'
             ),
-        ],className='six columns'),
-
-        html.Div([
-        dcc.Dropdown(id='piedropdown',
-            options=[
-                     {'label': 'Deaths', 'value': 'deaths'},
-                     {'label': 'Cases', 'value': 'cases'}
+            dcc.RadioItems(
+                id='crossfilter-type',
+                options=[{'label': i, 'value': i} for i in ['Linear', 'Log']],
+                value='Linear',
+                labelStyle={'display': 'inline-block'}
+            )
             ],
-            value='cases',
-            multi=False,
-            clearable=False
-        ),
-        ],className='six columns'),
-
-    ],className='row'),
-
+            style={'width': '100%', 'display': 'inline-block'}
+    ),
     html.Div([
-        html.Div([
-            dcc.Graph(id='linechart'),
-        ],className='six columns'),
-
-        html.Div([
-            dcc.Graph(id='piechart'),
-        ],className='six columns'),
-
-    ],className='row'),
-
-
+        dcc.Graph(id='x-time-series')
+        ],
+        style={'display': 'inline-block', 'width': '100%'}
+    )
 ])
 
 #------------------------------------------------------------------
+
+def create_time_series(dff, axis_type, title):
+
+    fig = px.scatter(dff, x='Year', y='Value')
+
+    fig.update_traces(mode='lines+markers')
+
+    fig.update_xaxes(showgrid=False)
+
+    fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log')
+
+    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
+                       xref='paper', yref='paper', showarrow=False, align='left',
+                       bgcolor='rgba(255, 255, 255, 0.5)', text=title)
+
+    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
+
+    return fig
+
+def create_time_series(dff, axis_type, title):
+
+    fig = px.scatter(dff, x='created_at', y=title)
+
+    fig.update_traces(mode='lines+markers')
+
+    fig.update_xaxes(showgrid=False)
+
+    fig.update_yaxes(type='linear' if axis_type == 'Linear' else 'log')
+
+    fig.add_annotation(x=0, y=0.85, xanchor='left', yanchor='bottom',
+                       xref='paper', yref='paper', showarrow=False, align='left',
+                       bgcolor='rgba(255, 255, 255, 0.5)', text=title)
+
+    fig.update_layout(height=225, margin={'l': 20, 'b': 30, 'r': 10, 't': 10})
+
+    return fig
+
 @app.callback(
-    [Output('piechart', 'figure'),
-     Output('linechart', 'figure')],
-    [Input('datatable_id', 'selected_rows'),
-     Input('piedropdown', 'value'),
-     Input('linedropdown', 'value')]
-)
-def update_data(chosen_rows,piedropval,linedropval):
-    if len(chosen_rows)==0:
-        df_filterd = dff[dff['countriesAndTerritories'].isin(['China','Iran','Spain','Italy'])]
-    else:
-        print(chosen_rows)
-        df_filterd = dff[dff.index.isin(chosen_rows)]
+    dash.dependencies.Output('x-time-series', 'figure'),
+    [dash.dependencies.Input('crossfilter-column', 'value'),
+     dash.dependencies.Input('crossfilter-type', 'value')])
+def update_x_timeseries(column_name, axis_type):
 
-    pie_chart=px.pie(
-            data_frame=df_filterd,
-            names='countriesAndTerritories',
-            values=piedropval,
-            hole=.3,
-            labels={'countriesAndTerritories':'Countries'}
-            )
+    dff = df.loc[:,['created_at', column_name] ]
+    return create_time_series(dff, axis_type, column_name)
 
 
-    #extract list of chosen countries
-    list_chosen_countries=df_filterd['countriesAndTerritories'].tolist()
-    #filter original df according to chosen countries
-    #because original df has all the complete dates
-    df_line = df[df['countriesAndTerritories'].isin(list_chosen_countries)]
-
-    line_chart = px.line(
-            data_frame=df_line,
-            x='dateRep',
-            y=linedropval,
-            color='countriesAndTerritories',
-            labels={'countriesAndTerritories':'Countries', 'dateRep':'date'},
-            )
-    line_chart.update_layout(uirevision='foo')
-
-    return (pie_chart,line_chart)
-
-#------------------------------------------------------------------
+# #------------------------------------------------------------------
 
 if __name__ == '__main__':
     app.run_server(debug=True)
