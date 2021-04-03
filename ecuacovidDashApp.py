@@ -71,7 +71,7 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(id='x-time-series')
         ],
-        style={'width': '80%', 'height':'80%', 'margin-left': '5%'}
+        style={'width': '80%', 'height':'80%', 'margin-left': '10%'}
     )
 ],
 className='container')
@@ -100,10 +100,8 @@ def create_time_series(dff, axis_type, title):
 def update_x_timeseries(column_name, axis_type, start_date, end_date):
 
     dff = df.loc[:,['ts', 'date', column_name] ]
-    print(start_date)
-    print(end_date)
     dff = dff.loc[(dff['ts']> start_date ) & ( dff['ts']< end_date ), :]
-    print(dff[['ts','date']])
+
     return create_time_series(dff, axis_type, column_name)
 
 
