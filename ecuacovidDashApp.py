@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
@@ -20,6 +21,14 @@ available_indicators = list(df.columns)
 df['ts'] = pd.to_datetime(df['date'],dayfirst=True)
 min_date = df['ts'].min()
 max_date = df['ts'].max()
+
+
+with open('provincias.geojson',encoding='utf-8') as response:
+    provincias = json.load(response)
+for idx in range(0,24):
+    provincias['features'][idx]['id'] = str(idx+1)
+
+df_provincia = pd.read_csv('defunciones_provincia.csv')
 
 
 mrkd_text = '''
@@ -72,6 +81,46 @@ app.layout = html.Div([
         dcc.Graph(id='x-time-series')
         ],
         style={'width': '80%', 'height':'80%', 'margin-left': '10%'}
+    ),
+    html.H6(
+        'Select year:',
+        style={'text-align':'left'}),
+    dcc.Dropdown(
+        id='dropdown-anno',
+        options=[
+            {'label': '2020', 'value': 2020},
+            {'label': '2021', 'value': 2021}
+        ],
+        value=2021
+    ),
+    html.H6(
+        'Select month:',
+        style={'text-align':'left'}),
+    dcc.Dropdown(
+        id='dropdown-mes',
+        options=[
+            {'label':'january','value':1},
+            {'label':'february','value':2},
+            {'label':'march','value':3},
+            {'label':'april','value':4},
+            {'label':'may','value':5},
+            {'label':'june','value':6},
+            {'label':'july','value':7},
+            {'label':'august','value':8},
+            {'label':'september','value':9},
+            {'label':'october','value':10},
+            {'label':'november','value':11},
+            {'label':'december','value':12}
+        ],
+        value=1
+    ),
+    html.H6(
+        id='titulo',
+        style={'text-align':'center'}),
+    html.Div([
+        dcc.Graph(id='heatmap')
+        ],
+        style={'width': '80%', 'height':'80%', 'margin-left': '10%'}
     )
 ],
 className='container')
@@ -104,6 +153,33 @@ def update_x_timeseries(column_name, axis_type, start_date, end_date):
 
     return create_time_series(dff, axis_type, column_name)
 
+@app.callback(
+    dash.dependencies.Output('heatmap', 'figure'),
+    [dash.dependencies.Input('dropdown-anno', 'value'),
+     dash.dependencies.Input('dropdown-mes', 'value')])
+def update_heatmap(year, month):
+
+    df_filter = df_provincia.loc[(df_provincia['mes']==month) & (df_provincia['anno']==year),:]
+    df_max = df_filter['total'].max()
+
+    fig = px.choropleth_mapbox(df_filter, geojson=provincias, locations='cod_provincia', color='total',
+                                range_color=(0, df_max),
+                                mapbox_style="carto-positron",
+                                zoom=4.3, center = {"lat": -1.5, "lon": -82.0},
+                                opacity=0.7,
+                                labels={'total':'No. Deceased'}
+                            )
+    fig.update_layout( title='Mes{}'.format(month), margin={"r":0,"t":0,"l":0,"b":0})
+
+    return fig
+
+@app.callback(
+    dash.dependencies.Output('titulo', 'children'),
+    [dash.dependencies.Input('dropdown-anno', 'value'),
+     dash.dependencies.Input('dropdown-mes', 'value')])
+def update_titulo(year, month):
+
+    return f"Year: {year} - Month:{month}"
 
 # #------------------------------------------------------------------
 
