@@ -32,7 +32,7 @@ df_provincia = pd.read_csv('defunciones_provincia.csv')
 
 
 mrkd_text = '''
-Data taken from [source](https://github.com/andrab/ecuacovid/tree/master/datos_crudos) on 01/04/2021
+Data taken from [source](https://github.com/andrab/ecuacovid/tree/master/datos_crudos) on 05/05/2021
 '''
 
 
@@ -45,6 +45,10 @@ app.layout = html.Div([
         dcc.Markdown(children=mrkd_text)
     ],style={'text-align':'left'}),
     html.Div([
+            html.H4(
+                'Time Series Data',
+                style={'text-align':'center'}             
+            ),
             html.H6(
                 'Select time series:',
                 style={'text-align':'left'}),
@@ -81,6 +85,10 @@ app.layout = html.Div([
         dcc.Graph(id='x-time-series')
         ],
         style={'width': '80%', 'height':'80%', 'margin-left': '10%'}
+    ),
+    html.H4(
+        'Heatmap',
+        style={'text-align':'center'}             
     ),
     html.H6(
         'Select year:',
